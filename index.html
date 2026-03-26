@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="my">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pwint Lan Online POS (Updated)</title>
+    <style>
+        body { font-family: sans-serif; margin: 0; padding: 10px; background: #fdf2f8; color: #333; }
+        .container { max-width: 500px; margin: auto; background: white; padding: 20px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
+        h3 { text-align: center; color: #be185d; }
+        .dashboard { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 20px; }
+        .card { background: #fce7f3; padding: 10px; border-radius: 10px; text-align: center; border: 1px solid #fbcfe8; }
+        .card p { margin: 5px 0 0; font-size: 16px; font-weight: bold; color: #be185d; }
+        .full-card { grid-column: span 2; background: #e0f2fe; }
+        label { font-size: 13px; font-weight: bold; display: block; margin-top: 15px; }
+        select, input { width: 100%; padding: 12px; margin: 5px 0; border: 1px solid #ddd; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        #alertBox { display: none; background: #fee2e2; border: 2px solid #ef4444; color: #b91c1c; padding: 10px; border-radius: 10px; margin-bottom: 10px; text-align: center; }
+        .count-info { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 10px; border-radius: 8px; margin-top: 5px; font-size: 13px; display: none; }
+        .btn-main { width: 100%; padding: 15px; background: #be185d; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        .section { display: none; margin-top: 20px; border-top: 1px solid #eee; padding-top: 10px; }
+        .report-row { display: flex; justify-content: space-between; padding: 10px; background: #f9fafb; margin-bottom: 5px; border-radius: 5px; border-left: 4px solid #be185d; align-items: center; }
+        .del-btn { background: #ef4444; color: white; border: none; padding: 5px 10px; border-radius: 5px; cursor: pointer; font-size: 11px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h3>Pwint Lan Beauty Saloon POS </h3>
+    <p id="connStatus" style="text-align:center; font-size:11px; color:orange;">ချိတ်ဆက်နေသည်...</p>
+
+    <div class="dashboard">
+        <div class="card"><h5>ယနေ့</h5><p id="dailyTotal">0 Ks</p></div>
+        <div class="card"><h5>ယခုလ</h5><p id="monthlyTotal">0 Ks</p></div>
+        <div class="card full-card"><h5>ယခုနှစ် စုစုပေါင်း</h5><p id="yearlyTotal">0 Ks</p></div>
+    </div>
+
+    <div id="alertBox"></div>
+
+    <label>👤 ဝယ်သူအမည်</label>
+    <input type="text" id="customerName" placeholder="ဝယ်သူအမည်..." oninput="checkLoyalty()">
+    <div id="countPreview" class="count-info"></div>
+
+    <label>🛍️ ဝန်ဆောင်မှု</label>
+    <select id="itemSelect" onchange="updatePrice()">
+        <option value="">-- ရွေးချယ်ပါ --</option>
+        <option value="ဆံပင်ညှပ်(ကျား)">ဆံပင်ညှပ်(ကျား) (၃,၀၀၀ Ks)</option>
+	<option value="ဆံပင်ညှပ်+လျှော်(ကျား)">ဆံပင်ညှပ်+လျှော်(ကျား) (၈,၀၀၀ Ks)</option>
+	<option value="ဆံပင်ညှပ်(မ)">ဆံပင်ညှပ်(မ) (၃,၀၀၀ Ks)</option>
+        <option value="ခေါင်းလျှော်(၁)">ခေါင်းလျှော်(၁) (၆,၀၀၀ Ks)</option>
+        <option value="ခေါင်းလျှော်(၂)">ခေါင်းလျှော်(၂) (၈,၀၀၀ Ks)</option>
+        <option value="ခေါင်းလျှော်(၃)">ခေါင်းလျှော်(၃) (၁၀,၀၀၀ Ks)</option>
+        <option value="မျက်နှာချေးချွတ်">မျက်နှာချေးချွတ် (၅,၀၀၀ Ks)</option>
+    </select>
+
+    <label>💰 ကျသင့်ငွေ (Ks)</label>
+    <input type="number" id="itemPrice" placeholder="ဈေးနှုန်း">
+
+    <label>👩‍💼 ဝန်ထမ်း</label>
+    <select id="sellerSelect">
+        <option value="မအေးအေးမြင့်">မအေးအေးမြင့်</option>
+        <option value="မထားထားနွယ်">မထားထားနွယ်</option>
+        <option value="မသန့်သစ္စာဝင်း">မသန့်သစ္စာဝင်း</option>
+    </select>
+
+    <button class="btn-main" id="saveBtn" onclick="saveData()">သိမ်းဆည်းမည်</button>
+    
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:5px; margin-top:10px;">
+        <button onclick="showSection('loyalty')" style="background:#10b981; color:white; border:none; padding:10px; border-radius:8px;">ဝယ်သူစာရင်း</button>
+        <button onclick="showSection('report')" style="background:#3b82f6; color:white; border:none; padding:10px; border-radius:8px;">Report</button>
+    </div>
+
+    <div id="loyaltySection" class="section"><h4>ဝယ်သူမှတ်တမ်း</h4><div id="loyaltyList"></div></div>
+    <div id="reportSection" class="section"><h4>ဝန်ထမ်းရောင်းအား</h4><div id="staffStats"></div></div>
+</div>
+
+<script>
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwALT5gQPq4RLk0enyMdhZiB52aGgeATBjehBeZ7J-x87vLvwVogkdAuRRMKct9-YbV/exec"; 
+
+    const itemPrices = { "ဆံပင်ညှပ်(ကျား)": 3000, "ဆံပင်ညှပ်+လျှော်(ကျား)": 8000, "ဆံပင်ညှပ်(မ)": 3000, "ခေါင်းလျှော်(၁)": 6000, "ခေါင်းလျှော်(၂)": 8000, "ခေါင်းလျှော်(၃)": 10000, "မျက်နှာချေးချွတ်": 5000 };
+    let transactions = [];
+
+    function updatePrice() {
+        const item = document.getElementById('itemSelect').value;
+        document.getElementById('itemPrice').value = itemPrices[item] || "";
+        checkLoyalty();
+    }
+
+    async function fetchData() {
+        try {
+            const response = await fetch(SCRIPT_URL);
+            const data = await response.json();
+            transactions = data.slice(1).map(r => ({
+                day: r[1], month: r[2], year: r[3], customer: r[4], item: r[5], price: Number(r[6]), seller: r[7]
+            }));
+            updateDashboard();
+            document.getElementById('connStatus').innerText = "Online (ချိတ်ဆက်မိသည်)";
+            document.getElementById('connStatus').style.color = "green";
+        } catch (e) {
+            document.getElementById('connStatus').innerText = "ချိတ်ဆက်မှု မအောင်မြင်ပါ။";
+            document.getElementById('connStatus').style.color = "red";
+        }
+    }
+
+    function updateDashboard() {
+        const now = new Date();
+        let d = 0, m = 0, y = 0;
+        transactions.forEach(t => {
+            if (t.day === now.toDateString()) d += t.price;
+            if (t.month == now.getMonth() && t.year == now.getFullYear()) m += t.price;
+            if (t.year == now.getFullYear()) y += t.price;
+        });
+        document.getElementById('dailyTotal').innerText = d.toLocaleString() + " Ks";
+        document.getElementById('monthlyTotal').innerText = m.toLocaleString() + " Ks";
+        document.getElementById('yearlyTotal').innerText = y.toLocaleString() + " Ks";
+    }
+
+    async function saveData() {
+        const customer = document.getElementById('customerName').value.trim();
+        const item = document.getElementById('itemSelect').value;
+        const price = document.getElementById('itemPrice').value;
+        const seller = document.getElementById('sellerSelect').value;
+
+        if (!customer || !item || !price) return alert("အကုန်ဖြည့်ပါ");
+
+        const btn = document.getElementById('saveBtn');
+        btn.disabled = true; btn.innerText = "သိမ်းနေသည်...";
+
+        const now = new Date();
+        const data = { day: now.toDateString(), month: now.getMonth(), year: now.getFullYear(), customer, item, price: Number(price), seller };
+
+        try {
+            await fetch(SCRIPT_URL, { method: "POST", mode: "no-cors", body: JSON.stringify(data) });
+            alert("သိမ်းပြီးပါပြီ။");
+            transactions.push(data);
+            updateDashboard();
+            document.getElementById('customerName').value = "";
+            document.getElementById('itemSelect').value = "";
+            document.getElementById('itemPrice').value = "";
+            document.getElementById('countPreview').style.display = "none";
+        } catch (e) { alert("Error ဖြစ်သွားပါသည်။"); }
+        btn.disabled = false; btn.innerText = "သိမ်းဆည်းမည်";
+    }
+
+    // နာမည်ရိုက်တာနဲ့ အကြိမ်ရေပြခြင်း နှင့် ၁၀ ကြိမ်စစ်ခြင်း
+    function checkLoyalty() {
+        const name = document.getElementById('customerName').value.trim();
+        const item = document.getElementById('itemSelect').value;
+        const alertBox = document.getElementById('alertBox');
+        const countPreview = document.getElementById('countPreview');
+
+        if (!name) { alertBox.style.display = "none"; countPreview.style.display = "none"; return; }
+
+        const userRecords = transactions.filter(t => t.customer.toLowerCase() === name.toLowerCase());
+        
+        // အကြိမ်ရေ Preview ပြရန်
+        if (userRecords.length > 0) {
+            countPreview.style.display = "block";
+            const summary = {};
+            userRecords.forEach(r => summary[r.item] = (summary[r.item] || 0) + 1);
+            countPreview.innerHTML = "<strong>ယခင်မှတ်တမ်း:</strong> " + Object.keys(summary).map(k => `${k} (${summary[k]} ကြိမ်)`).join(", ");
+        } else {
+            countPreview.style.display = "none";
+        }
+
+        // ၁၀ ကြိမ်ပြည့် စစ်ဆေးရန်
+        if (item) {
+            const count = userRecords.filter(t => t.item === item).length;
+            if (count >= 9) {
+                alertBox.style.display = "block";
+                alertBox.innerHTML = `🎁 ${name} သည် ${item} (၁၀) ကြိမ်ပြည့်ပါပြီ။`;
+            } else { alertBox.style.display = "none"; }
+        }
+    }
+
+    async function deleteLoyalty(customer, item) {
+        if (!confirm(`${customer} ၏ ${item} မှတ်တမ်းအားလုံးကို ဖျက်မည် (သို့မဟုတ်) Promotion အဖြစ် သုံးမည်လား?`)) return;
+        
+        try {
+            await fetch(SCRIPT_URL, { 
+                method: "POST", 
+                mode: "no-cors", 
+                body: JSON.stringify({ action: "delete", customer: customer, item: item }) 
+            });
+            alert("ဖျက်ပြီးပါပြီ။");
+            // Local data မှပါ ဖျက်လိုက်ခြင်း
+            transactions = transactions.filter(t => !(t.customer === customer && t.item === item));
+            updateDashboard();
+            renderLoyalty();
+        } catch (e) { alert("ဖျက်၍မရပါ"); }
+    }
+
+    function showSection(type) {
+        document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+        if(type === 'loyalty') {
+            document.getElementById('loyaltySection').style.display = 'block';
+            renderLoyalty();
+        } else {
+            document.getElementById('reportSection').style.display = 'block';
+            renderReport();
+        }
+    }
+
+    function renderLoyalty() {
+        const div = document.getElementById('loyaltyList');
+        const summary = {};
+        transactions.forEach(t => {
+            if(!summary[t.customer]) summary[t.customer] = {};
+            summary[t.customer][t.item] = (summary[t.customer][t.item] || 0) + 1;
+        });
+        let html = "";
+        for(let name in summary) {
+            for(let itm in summary[name]) {
+                const c = summary[name][itm];
+                html += `<div class="report-row">
+                            <span><b>${name}</b><br><small>${itm}: ${c} ကြိမ်</small></span>
+                            ${c >= 10 ? `<button class="del-btn" onclick="deleteLoyalty('${name}', '${itm}')">ဖျက်မည်</button>` : ''}
+                         </div>`;
+            }
+        }
+        div.innerHTML = html || "မှတ်တမ်းမရှိပါ။";
+    }
+
+    function renderReport() {
+        const staff = { "မအေးအေးမြင့်": 0, "မထားထားနွယ်": 0, "မသန့်သစ္စာဝင်း": 0 };
+        const now = new Date();
+        transactions.forEach(t => {
+            if(t.month == now.getMonth() && t.year == now.getFullYear() && staff.hasOwnProperty(t.seller)) {
+                staff[t.seller] += t.price;
+            }
+        });
+        document.getElementById('staffStats').innerHTML = Object.keys(staff).map(n => `<div class="report-row"><span>${n}</span><span>${staff[n].toLocaleString()} Ks</span></div>`).join('');
+    }
+
+    fetchData();
+</script>
+</body>
+</html>
